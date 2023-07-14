@@ -1,0 +1,14 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "com.clientcrafting.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+  ],
+  "client": [
+    "CraftingMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

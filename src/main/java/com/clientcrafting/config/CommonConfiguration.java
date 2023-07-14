@@ -1,7 +1,7 @@
-package com.template.config;
+package com.clientcrafting.config;
 
+import com.clientcrafting.ClientCraftingMod;
 import com.google.gson.JsonObject;
-import com.template.TemplateMod;
 
 public class CommonConfiguration {
 
@@ -23,7 +23,7 @@ public class CommonConfiguration {
 
     public void deserialize(JsonObject data) {
         if (data == null) {
-            TemplateMod.LOGGER.error("Config file was empty!");
+            ClientCraftingMod.LOGGER.error("Config file was empty!");
             return;
         }
 

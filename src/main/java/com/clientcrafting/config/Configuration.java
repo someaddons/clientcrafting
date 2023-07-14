@@ -1,9 +1,9 @@
-package com.template.config;
+package com.clientcrafting.config;
 
+import com.clientcrafting.ClientCraftingMod;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
-import com.template.TemplateMod;
 import net.minecraftforge.fml.loading.FMLPaths;
 
 import java.io.BufferedWriter;
@@ -34,12 +34,12 @@ public class Configuration
 
     public void load()
     {
-        final Path configPath = FMLPaths.CONFIGDIR.get().resolve(TemplateMod.MOD_ID + ".json");
+        final Path configPath = FMLPaths.CONFIGDIR.get().resolve(ClientCraftingMod.MOD_ID + ".json");
         final File config = configPath.toFile();
 
         if (!config.exists())
         {
-            TemplateMod.LOGGER.warn("Config not found, recreating default");
+            ClientCraftingMod.LOGGER.warn("Config not found, recreating default");
             save();
         }
         else
@@ -50,14 +50,14 @@ public class Configuration
             }
             catch (Exception e)
             {
-                TemplateMod.LOGGER.error("Could not read config from:" + configPath, e);
+                ClientCraftingMod.LOGGER.error("Could not read config from:" + configPath, e);
             }
         }
     }
 
     public void save()
     {
-        final Path configPath = FMLPaths.CONFIGDIR.get().resolve(TemplateMod.MOD_ID + ".json");
+        final Path configPath = FMLPaths.CONFIGDIR.get().resolve(ClientCraftingMod.MOD_ID + ".json");
         try
         {
             final BufferedWriter writer = Files.newBufferedWriter(configPath);
@@ -66,7 +66,7 @@ public class Configuration
         }
         catch (IOException e)
         {
-            TemplateMod.LOGGER.error("Could not write config to:" + configPath, e);
+            ClientCraftingMod.LOGGER.error("Could not write config to:" + configPath, e);
         }
     }
 

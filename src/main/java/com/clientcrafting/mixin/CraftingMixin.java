@@ -1,5 +1,6 @@
 package com.clientcrafting.mixin;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -19,6 +20,8 @@ import java.util.Optional;
 @Mixin(CraftingMenu.class)
 public class CraftingMixin
 {
+    @Unique
+    private static boolean queued = false;
 
     @Shadow
     @Final
@@ -30,38 +33,57 @@ public class CraftingMixin
     private Player player;
 
     @Inject(method = "<init>(ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/inventory/ContainerLevelAccess;)V", at = @At("RETURN"))
-    private void onInitContainerAccess(final int p_39356_, final Inventory p_39357_, final ContainerLevelAccess containerLevelAccess, final CallbackInfo ci) {
-        if (containerLevelAccess == ContainerLevelAccess.NULL) {
+    private void onInitContainerAccess(final int p_39356_, final Inventory p_39357_, final ContainerLevelAccess containerLevelAccess, final CallbackInfo ci)
+    {
+        if (containerLevelAccess == ContainerLevelAccess.NULL)
+        {
             this.access = ContainerLevelAccess.create(player.level(), player.blockPosition());
         }
     }
 
     @Inject(method = "slotChangedCraftingGrid", at = @At("RETURN"))
     private static void showClientRecipe(
-            final AbstractContainerMenu menu,
-            final Level level,
-            final Player player,
-            final CraftingContainer container,
-            final ResultContainer resultContainer, final CallbackInfo ci) {
-        if (level.isClientSide()) {
-            Optional<CraftingRecipe> optional = level.getRecipeManager().getRecipeFor(RecipeType.CRAFTING, container, level);
-            if (optional.isPresent()) {
-                CraftingRecipe craftingrecipe = optional.get();
-                if (setRecipeUsedClientCheck(level, (LocalPlayer) player, craftingrecipe)) {
-                    final ItemStack itemstack = craftingrecipe.assemble(container, level.registryAccess());
-                    resultContainer.setItem(0, itemstack);
-                    menu.setRemoteSlot(0, itemstack);
-                }
-            } else {
-                resultContainer.setItem(0, ItemStack.EMPTY);
-                menu.setRemoteSlot(0, ItemStack.EMPTY);
+      final AbstractContainerMenu menu,
+      final Level level,
+      final Player player,
+      final CraftingContainer container,
+      final ResultContainer resultContainer, final CallbackInfo ci)
+    {
+        if (level.isClientSide())
+        {
+            if (!queued)
+            {
+                queued = true;
+                Minecraft.getInstance().submit(() ->
+                {
+                    Optional<CraftingRecipe> optional = level.getRecipeManager().getRecipeFor(RecipeType.CRAFTING, container, level);
+                    if (optional.isPresent())
+                    {
+                        CraftingRecipe craftingrecipe = optional.get();
+                        if (setRecipeUsedClientCheck(level, (LocalPlayer) player, craftingrecipe))
+                        {
+                            final ItemStack itemstack = craftingrecipe.assemble(container, level.registryAccess());
+                            resultContainer.setItem(0, itemstack);
+                            menu.setRemoteSlot(0, itemstack);
+                        }
+                    }
+                    else
+                    {
+                        resultContainer.setItem(0, ItemStack.EMPTY);
+                        menu.setRemoteSlot(0, ItemStack.EMPTY);
+                    }
+
+                    queued = false;
+                });
             }
         }
     }
 
     @Unique
-    private static boolean setRecipeUsedClientCheck(final Level level, final LocalPlayer player, final CraftingRecipe craftingrecipe) {
-        if (!craftingrecipe.isSpecial() && level.getGameRules().getBoolean(GameRules.RULE_LIMITED_CRAFTING) && !player.getRecipeBook().contains(craftingrecipe)) {
+    private static boolean setRecipeUsedClientCheck(final Level level, final LocalPlayer player, final CraftingRecipe craftingrecipe)
+    {
+        if (!craftingrecipe.isSpecial() && level.getGameRules().getBoolean(GameRules.RULE_LIMITED_CRAFTING) && !player.getRecipeBook().contains(craftingrecipe))
+        {
             return false;
         }
         return true;

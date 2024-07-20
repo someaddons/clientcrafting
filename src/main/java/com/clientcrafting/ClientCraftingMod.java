@@ -1,6 +1,8 @@
 package com.clientcrafting;
 
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.Mod;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -16,7 +18,7 @@ public class ClientCraftingMod
     public static final Logger LOGGER = LogManager.getLogger();
     public static       Random rand   = new Random();
 
-    public ClientCraftingMod()
+    public ClientCraftingMod(IEventBus modEventBus, ModContainer modContainer)
     {
     }
 }

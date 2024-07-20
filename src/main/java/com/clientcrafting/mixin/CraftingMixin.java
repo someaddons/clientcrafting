@@ -7,9 +7,11 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -47,7 +49,7 @@ public class CraftingMixin
       final Level level,
       final Player player,
       final CraftingContainer container,
-      final ResultContainer resultContainer, final CallbackInfo ci)
+      final ResultContainer resultContainer, @Nullable RecipeHolder<CraftingRecipe> recipeHolder, final CallbackInfo ci)
     {
         if (level.isClientSide())
         {
@@ -56,22 +58,23 @@ public class CraftingMixin
                 queued = true;
                 Minecraft.getInstance().submit(() ->
                 {
-                    Optional<CraftingRecipe> optional = level.getRecipeManager().getRecipeFor(RecipeType.CRAFTING, container, level);
+                    ItemStack itemStack = ItemStack.EMPTY;
+                    Optional<RecipeHolder<CraftingRecipe>> optional = level.getRecipeManager().getRecipeFor(RecipeType.CRAFTING, container.asCraftInput(), level, recipeHolder);
                     if (optional.isPresent())
                     {
-                        CraftingRecipe craftingrecipe = optional.get();
-                        if (setRecipeUsedClientCheck(level, (LocalPlayer) player, craftingrecipe))
+                        RecipeHolder<CraftingRecipe> craftingrecipe = optional.get();
+                        if (setRecipeUsedClientCheck(level, (LocalPlayer) player, craftingrecipe, resultContainer))
                         {
-                            final ItemStack itemstack = craftingrecipe.assemble(container, level.registryAccess());
-                            resultContainer.setItem(0, itemstack);
-                            menu.setRemoteSlot(0, itemstack);
+                            final ItemStack resultItem = craftingrecipe.value().assemble(container.asCraftInput(), level.registryAccess());
+                            if (resultItem.isItemEnabled(level.enabledFeatures()))
+                            {
+                                itemStack = resultItem;
+                            }
                         }
                     }
-                    else
-                    {
-                        resultContainer.setItem(0, ItemStack.EMPTY);
-                        menu.setRemoteSlot(0, ItemStack.EMPTY);
-                    }
+
+                    resultContainer.setItem(0, itemStack);
+                    menu.setRemoteSlot(0, itemStack);
 
                     queued = false;
                 });
@@ -80,12 +83,17 @@ public class CraftingMixin
     }
 
     @Unique
-    private static boolean setRecipeUsedClientCheck(final Level level, final LocalPlayer player, final CraftingRecipe craftingrecipe)
+    private static boolean setRecipeUsedClientCheck(
+      final Level level,
+      final LocalPlayer player,
+      final RecipeHolder<CraftingRecipe> craftingrecipe,
+      final ResultContainer resultContainer)
     {
-        if (!craftingrecipe.isSpecial() && level.getGameRules().getBoolean(GameRules.RULE_LIMITED_CRAFTING) && !player.getRecipeBook().contains(craftingrecipe))
+        if (!craftingrecipe.value().isSpecial() && level.getGameRules().getBoolean(GameRules.RULE_LIMITED_CRAFTING) && !player.getRecipeBook().contains(craftingrecipe))
         {
             return false;
         }
+        resultContainer.setRecipeUsed(craftingrecipe);
         return true;
     }
 }

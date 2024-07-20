@@ -1,7 +1,6 @@
 package com.clientcrafting;
 
 import net.fabricmc.api.ModInitializer;
-import net.minecraft.resources.ResourceLocation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -15,9 +14,5 @@ public class ClientCraftingMod implements ModInitializer {
 
     @Override
     public void onInitialize() {
-    }
-
-    public static ResourceLocation id(String name) {
-        return new ResourceLocation(MOD_ID, name);
     }
 }

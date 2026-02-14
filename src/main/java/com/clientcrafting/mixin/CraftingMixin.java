@@ -1,6 +1,6 @@
 package com.clientcrafting.mixin;
 
-import net.minecraft.client.Minecraft;
+import com.clientcrafting.ClientCraftingMod;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -15,13 +15,18 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.List;
 import java.util.Optional;
 
 @Mixin(CraftingMenu.class)
 public class CraftingMixin
 {
     @Unique
-    private static boolean queued = false;
+    private static List<ItemStack> lastItems;
+    @Unique
+    private static long            lastTickCount = 0;
+    @Unique
+    private static Optional<CraftingRecipe> lastRecipe = Optional.empty();
 
     @Shadow
     @Final
@@ -31,6 +36,7 @@ public class CraftingMixin
     @Shadow
     @Final
     private Player player;
+
 
     @Inject(method = "<init>(ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/inventory/ContainerLevelAccess;)V", at = @At("RETURN"))
     private void onInitContainerAccess(final int p_39356_, final Inventory p_39357_, final ContainerLevelAccess containerLevelAccess, final CallbackInfo ci)
@@ -51,30 +57,51 @@ public class CraftingMixin
     {
         if (level.isClientSide())
         {
-            if (!queued)
+            if (lastTickCount != level.getGameTime())
             {
-                queued = true;
-                Minecraft.getInstance().submit(() ->
+                lastTickCount = level.getGameTime();
+                lastItems = container.getItems();
+                lastRecipe = level.getRecipeManager().getRecipeFor(RecipeType.CRAFTING, container, level);
+            }
+            else
+            {
+                boolean matches = true;
+                List<ItemStack> current = container.getItems();
+                if (current.size() == lastItems.size())
                 {
-                    Optional<CraftingRecipe> optional = level.getRecipeManager().getRecipeFor(RecipeType.CRAFTING, container, level);
-                    if (optional.isPresent())
+                    for (int i = 0; i < current.size(); i++)
                     {
-                        CraftingRecipe craftingrecipe = optional.get();
-                        if (setRecipeUsedClientCheck(level, (LocalPlayer) player, craftingrecipe))
+                        if (!ItemStack.isSameItemSameTags(current.get(i), lastItems.get(i)))
                         {
-                            final ItemStack itemstack = craftingrecipe.assemble(container, level.registryAccess());
-                            resultContainer.setItem(0, itemstack);
-                            menu.setRemoteSlot(0, itemstack);
+                            matches = false;
                         }
                     }
-                    else
-                    {
-                        resultContainer.setItem(0, ItemStack.EMPTY);
-                        menu.setRemoteSlot(0, ItemStack.EMPTY);
-                    }
+                }
+                else
+                {
+                    matches = false;
+                }
 
-                    queued = false;
-                });
+                if (!matches)
+                {
+                    lastRecipe = level.getRecipeManager().getRecipeFor(RecipeType.CRAFTING, container, level);
+                }
+            }
+
+            if (lastRecipe.isPresent())
+            {
+                CraftingRecipe craftingrecipe = lastRecipe.get();
+                if (setRecipeUsedClientCheck(level, (LocalPlayer) player, craftingrecipe))
+                {
+                    final ItemStack itemstack = craftingrecipe.assemble(container, level.registryAccess());
+                    resultContainer.setItem(0, itemstack);
+                    menu.setRemoteSlot(0, itemstack);
+                }
+            }
+            else
+            {
+                resultContainer.setItem(0, ItemStack.EMPTY);
+                menu.setRemoteSlot(0, ItemStack.EMPTY);
             }
         }
     }

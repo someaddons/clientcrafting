@@ -1,34 +1,24 @@
 package com.clientcrafting.mixin;
 
-import net.minecraft.client.player.LocalPlayer;
+import com.clientcrafting.ClientCraftingClient;
+import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.*;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.CraftingRecipe;
-import net.minecraft.world.item.crafting.RecipeHolder;
-import net.minecraft.world.item.crafting.RecipeType;
-import net.minecraft.world.level.GameRules;
-import net.minecraft.world.level.Level;
-import org.jetbrains.annotations.Nullable;
-import org.spongepowered.asm.mixin.*;
+import net.minecraft.world.inventory.AbstractCraftingMenu;
+import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.CraftingMenu;
+import net.minecraft.world.inventory.MenuType;
+import org.spongepowered.asm.mixin.Final;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Mutable;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.List;
-import java.util.Optional;
-
 @Mixin(CraftingMenu.class)
-public class CraftingMixin
+public abstract class CraftingMixin extends AbstractCraftingMenu
 {
-    @Unique
-    private static List<ItemStack>                        lastItems;
-    @Unique
-    private static long                                   lastTickCount = 0;
-    @Unique
-    private static Optional<RecipeHolder<CraftingRecipe>> lastRecipe    = Optional.empty();
-
     @Shadow
     @Final
     @Mutable
@@ -38,6 +28,10 @@ public class CraftingMixin
     @Final
     private Player player;
 
+    public CraftingMixin(final MenuType<?> p_362493_, final int p_360673_, final int p_364200_, final int p_363034_)
+    {
+        super(p_362493_, p_360673_, p_364200_, p_363034_);
+    }
 
     @Inject(method = "<init>(ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/inventory/ContainerLevelAccess;)V", at = @At("RETURN"))
     private void onInitContainerAccess(final int p_39356_, final Inventory p_39357_, final ContainerLevelAccess containerLevelAccess, final CallbackInfo ci)
@@ -48,78 +42,15 @@ public class CraftingMixin
         }
     }
 
-    @Inject(method = "slotChangedCraftingGrid", at = @At("RETURN"))
-    private static void showClientRecipe(
-      final AbstractContainerMenu menu,
-      final Level level,
-      final Player player,
-      final CraftingContainer container,
-      final ResultContainer resultContainer, @Nullable RecipeHolder<CraftingRecipe> recipeHolder, final CallbackInfo ci)
+    @Inject(method = "slotsChanged", at = @At("RETURN"))
+    private void showClientRecipe(
+        final Container p_39366_, final CallbackInfo ci)
     {
-        if (level.isClientSide())
-        {
-            if (lastTickCount != level.getGameTime())
+        this.access.execute((level, p_379188_) -> {
+            if (level.isClientSide())
             {
-                lastTickCount = level.getGameTime();
-                lastItems = container.getItems();
-                lastRecipe = level.getRecipeManager().getRecipeFor(RecipeType.CRAFTING, container.asCraftInput(), level, recipeHolder);
+                ClientCraftingClient.oncraft(level, (CraftingMenu) (Object) this);
             }
-            else
-            {
-                boolean matches = true;
-                List<ItemStack> current = container.getItems();
-                if (current.size() == lastItems.size())
-                {
-                    for (int i = 0; i < current.size(); i++)
-                    {
-                        if (!ItemStack.isSameItemSameComponents(current.get(i), lastItems.get(i)))
-                        {
-                            matches = false;
-                        }
-                    }
-                }
-                else
-                {
-                    matches = false;
-                }
-
-                if (!matches)
-                {
-                    lastRecipe = level.getRecipeManager().getRecipeFor(RecipeType.CRAFTING, container.asCraftInput(), level, recipeHolder);
-                }
-            }
-
-            ItemStack itemStack = ItemStack.EMPTY;
-            if (lastRecipe.isPresent())
-            {
-                RecipeHolder<CraftingRecipe> craftingrecipe = lastRecipe.get();
-                if (setRecipeUsedClientCheck(level, (LocalPlayer) player, craftingrecipe, resultContainer))
-                {
-                    final ItemStack resultItem = craftingrecipe.value().assemble(container.asCraftInput(), level.registryAccess());
-                    if (resultItem.isItemEnabled(level.enabledFeatures()))
-                    {
-                        itemStack = resultItem;
-                    }
-                }
-            }
-
-            resultContainer.setItem(0, itemStack);
-            menu.setRemoteSlot(0, itemStack);
-        }
-    }
-
-    @Unique
-    private static boolean setRecipeUsedClientCheck(
-      final Level level,
-      final LocalPlayer player,
-      final RecipeHolder<CraftingRecipe> craftingrecipe,
-      final ResultContainer resultContainer)
-    {
-        if (!craftingrecipe.value().isSpecial() && level.getGameRules().getBoolean(GameRules.RULE_LIMITED_CRAFTING) && !player.getRecipeBook().contains(craftingrecipe))
-        {
-            return false;
-        }
-        resultContainer.setRecipeUsed(craftingrecipe);
-        return true;
+        });
     }
 }

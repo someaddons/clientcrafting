@@ -6,7 +6,8 @@
   "mixins": [
   ],
   "client": [
-    "CraftingMixin"
+    "CraftingMixin",
+    "PlaceRecipeMixin"
   ],
   "injectors": {
     "defaultRequire": 1

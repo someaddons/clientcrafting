@@ -20,5 +20,6 @@ public class ClientCraftingMod
 
     public ClientCraftingMod(IEventBus modEventBus, ModContainer modContainer)
     {
+
     }
 }

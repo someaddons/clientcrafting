@@ -262,7 +262,7 @@ public class ClientCraftingClient
         List<ItemStack> stacksToUse = new ArrayList<>();
         for (final Ingredient req : displayEntry.craftingRequirements().get())
         {
-            for (final ItemStack stack : Minecraft.getInstance().player.getInventory().items)
+            for (final ItemStack stack : Minecraft.getInstance().player.getInventory())
             {
                 if (req.test(stack))
                 {
@@ -284,7 +284,7 @@ public class ClientCraftingClient
                 for (final Ingredient req : displayEntry.craftingRequirements().get())
                 {
                     boolean hasReq = false;
-                    for (final ItemStack stack : Minecraft.getInstance().player.getInventory().items)
+                    for (final ItemStack stack : Minecraft.getInstance().player.getInventory())
                     {
                         if (req.test(stack))
                         {

@@ -2,7 +2,6 @@ package com.clientcrafting;
 
 import net.minecraft.client.ClientRecipeBook;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.recipebook.RecipeCollection;
 import net.minecraft.util.context.ContextMap;
 import net.minecraft.world.entity.player.StackedItemContents;
@@ -275,7 +274,7 @@ public class ClientCraftingClient
             }
         }
 
-        if (Screen.hasShiftDown())
+        if (Minecraft.getInstance().hasShiftDown())
         {
             boolean hasAll = true;
             while (hasAll)

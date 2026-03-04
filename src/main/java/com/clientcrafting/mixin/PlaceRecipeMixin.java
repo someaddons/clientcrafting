@@ -20,7 +20,7 @@ public class PlaceRecipeMixin<T extends RecipeBookMenu>
     protected T menu;
 
     @Inject(method = "tryPlaceRecipe", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;handlePlaceRecipe(ILnet/minecraft/world/item/crafting/display/RecipeDisplayId;Z)V"))
-    private void placeNow(final RecipeCollection recipeCollection, final RecipeDisplayId displayId, final CallbackInfoReturnable<Boolean> cir)
+    private void placeNow(final RecipeCollection recipeCollection, final RecipeDisplayId displayId, final boolean p_446681_, final CallbackInfoReturnable<Boolean> cir)
     {
         ClientCraftingClient.tryPlaceRecipe(recipeCollection, displayId, menu);
     }

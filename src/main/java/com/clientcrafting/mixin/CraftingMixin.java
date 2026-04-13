@@ -25,7 +25,7 @@ import java.util.Optional;
 public class CraftingMixin
 {
     @Unique
-    private static List<ItemStack>                        lastItems;
+    private static List<ItemStack> lastItems = new ArrayList<>();
     @Unique
     private static long                                   lastTickCount = 0;
     @Unique
@@ -61,7 +61,7 @@ public class CraftingMixin
         {
             try
             {
-                if (lastTickCount != level.getGameTime())
+                if (lastTickCount != level.getGameTime() || lastRecipe.isEmpty())
                 {
                     lastTickCount = level.getGameTime();
                     lastRecipe = level.getRecipeManager().getRecipeFor(RecipeType.CRAFTING, container.asCraftInput(), level, recipeHolder);

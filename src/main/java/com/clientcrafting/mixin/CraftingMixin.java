@@ -1,5 +1,6 @@
 package com.clientcrafting.mixin;
 
+import com.clientcrafting.ClientCraftingMod;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -14,6 +15,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,7 +23,7 @@ import java.util.Optional;
 public class CraftingMixin
 {
     @Unique
-    private static List<ItemStack>          lastItems;
+    private static List<ItemStack> lastItems = new ArrayList<>();
     @Unique
     private static long                     lastTickCount = 0;
     @Unique
@@ -35,7 +37,6 @@ public class CraftingMixin
     @Shadow
     @Final
     private Player player;
-
 
     @Inject(method = "<init>(ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/inventory/ContainerLevelAccess;)V", at = @At("RETURN"))
     private void onInitContainerAccess(final int p_39356_, final Inventory p_39357_, final ContainerLevelAccess containerLevelAccess, final CallbackInfo ci)
@@ -56,51 +57,73 @@ public class CraftingMixin
     {
         if (level.isClientSide())
         {
-            if (lastTickCount != level.getGameTime())
+            try
             {
-                lastTickCount = level.getGameTime();
-                lastItems = container.getItems();
-                lastRecipe = level.getRecipeManager().getRecipeFor(RecipeType.CRAFTING, container, level);
-            }
-            else
-            {
-                boolean matches = true;
-                List<ItemStack> current = container.getItems();
-                if (current.size() == lastItems.size())
+                if (lastTickCount != level.getGameTime() || lastRecipe.isEmpty())
                 {
-                    for (int i = 0; i < current.size(); i++)
+                    lastTickCount = level.getGameTime();
+                    lastRecipe = level.getRecipeManager().getRecipeFor(RecipeType.CRAFTING, container, level);
+                    if (lastRecipe.isPresent())
                     {
-                        if (!ItemStack.isSameItemSameTags(current.get(i), lastItems.get(i)))
+                        lastItems = new ArrayList<>();
+                        for (final ItemStack stack : container.getItems())
                         {
-                            matches = false;
+                            lastItems.add(stack.copy());
                         }
                     }
                 }
                 else
                 {
-                    matches = false;
+                    boolean matches = true;
+                    List<ItemStack> current = container.getItems();
+                    if (current.size() == lastItems.size())
+                    {
+                        for (int i = 0; i < current.size(); i++)
+                        {
+                            if (!ItemStack.isSameItemSameTags(current.get(i), lastItems.get(i)))
+                            {
+                                matches = false;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        matches = false;
+                    }
+
+                    if (!matches)
+                    {
+                        lastRecipe = level.getRecipeManager().getRecipeFor(RecipeType.CRAFTING, container, level);
+                        if (lastRecipe.isPresent())
+                        {
+                            lastItems = new ArrayList<>();
+                            for (final ItemStack stack : container.getItems())
+                            {
+                                lastItems.add(stack.copy());
+                            }
+                        }
+                    }
                 }
 
-                if (!matches)
+                if (lastRecipe.isPresent())
                 {
-                    lastRecipe = level.getRecipeManager().getRecipeFor(RecipeType.CRAFTING, container, level);
+                    CraftingRecipe craftingrecipe = lastRecipe.get();
+                    if (setRecipeUsedClientCheck(level, (LocalPlayer) player, craftingrecipe))
+                    {
+                        final ItemStack itemstack = craftingrecipe.assemble(container, level.registryAccess());
+                        resultContainer.setItem(0, itemstack);
+                        menu.setRemoteSlot(0, itemstack);
+                    }
+                }
+                else
+                {
+                    resultContainer.setItem(0, ItemStack.EMPTY);
+                    menu.setRemoteSlot(0, ItemStack.EMPTY);
                 }
             }
-
-            if (lastRecipe.isPresent())
+            catch (Exception e)
             {
-                CraftingRecipe craftingrecipe = lastRecipe.get();
-                if (setRecipeUsedClientCheck(level, (LocalPlayer) player, craftingrecipe))
-                {
-                    final ItemStack itemstack = craftingrecipe.assemble(container, level.registryAccess());
-                    resultContainer.setItem(0, itemstack);
-                    menu.setRemoteSlot(0, itemstack);
-                }
-            }
-            else
-            {
-                resultContainer.setItem(0, ItemStack.EMPTY);
-                menu.setRemoteSlot(0, ItemStack.EMPTY);
+                ClientCraftingMod.LOGGER.info("Error during crafting prediciton: recipe:" + lastRecipe + " container:" + container, e);
             }
         }
     }

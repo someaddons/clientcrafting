@@ -21,7 +21,7 @@ import java.util.Objects;
 
 public class ClientCraftingClient
 {
-    private static List<ItemStack>    lastItems;
+    private static List<ItemStack> lastItems = new ArrayList<>();
     private static long               lastTickCount = 0;
     private static RecipeDisplayEntry lastRecipe    = null;
     private static ItemStack          lastSet       = ItemStack.EMPTY;
@@ -39,6 +39,10 @@ public class ClientCraftingClient
             lastSet = ItemStack.EMPTY;
             craftingMenu.getResultSlot().set(lastSet);
             craftingMenu.setRemoteSlot(0, lastSet);
+        }
+        else if (craftingMenu.getResultSlot().hasItem())
+        {
+            return;
         }
 
         final ClientRecipeBook recipeBook = Minecraft.getInstance().player.getRecipeBook();
@@ -70,7 +74,7 @@ public class ClientCraftingClient
             lastItems = new ArrayList<>();
             for (final Slot slot : slotList)
             {
-                lastItems.add(slot.getItem());
+                lastItems.add(slot.getItem().copy());
             }
 
             StackedItemContents contents = new StackedItemContents();
